@@ -1,24 +1,52 @@
 import requests
 
-def consulta_openstreetmap(logradouro, numero, bairro, cidade, estado):
-    query = f'{logradouro} {numero} {bairro} {cidade} {estado}'
-    url = f'https://nominatim.openstreetmap.org/search?format=json&limit=1&q={query}'
+def consulta_openstreetmap(logradouro=None, numero=None, bairro=None, cidade=None, estado=None):
+    base_url = "https://nominatim.openstreetmap.org/search"
+    params = {
+        'format': 'json',
+        'addressdetails': 1,
+        'limit': 1,
+    }
+
+    address_parts = []
+
+    if logradouro:
+        address_parts.append(logradouro)
+    if numero:
+        address_parts.append(numero)
+    if bairro:
+        address_parts.append(bairro)
+    if cidade:
+        address_parts.append(cidade)
+    if estado:
+        address_parts.append(estado)
+
+    if not address_parts:
+        # Sem dados para consulta
+        return None
+
+    params['q'] = ', '.join(address_parts)
+
     try:
-        resposta = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
-        dados = resposta.json()
+        response = requests.get(base_url, params=params, headers={'User-Agent': 'Mozilla/5.0'})
+        response.raise_for_status()
+        dados = response.json()
         if dados:
-            endereco = dados[0]
+            resultado = dados[0]
+            endereco = resultado.get('address', {})
+
             return {
-                'logradouro': endereco.get('address', {}).get('road', logradouro),
-                'numero': numero,
-                'bairro': endereco.get('address', {}).get('suburb', bairro),
-                'cidade': endereco.get('address', {}).get('city', cidade),
-                'estado': endereco.get('address', {}).get('state', estado),
-                'cep': endereco.get('address', {}).get('postcode', None),
-                'lat': endereco.get('lat', None),
-                'lon': endereco.get('lon', None)
+                'logradouro': endereco.get('road') or endereco.get('pedestrian') or endereco.get('footway') or logradouro,
+                'numero': endereco.get('house_number') or numero,
+                'bairro': endereco.get('suburb') or bairro,
+                'cidade': endereco.get('city') or endereco.get('town') or endereco.get('village') or cidade,
+                'estado': endereco.get('state') or estado,
+                'cep': endereco.get('postcode'),
+                'lat': resultado.get('lat'),
+                'lon': resultado.get('lon'),
             }
         else:
             return None
-    except:
+
+    except requests.RequestException:
         return None
