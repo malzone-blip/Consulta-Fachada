@@ -24,13 +24,5 @@ def extrair_detalhes_endereco(texto):
 
     return campos
 
-def cruzar_informacoes(dados_apis):
-    chaves = ['logradouro', 'numero', 'bairro', 'cidade', 'estado', 'cep', 'lat', 'lon']
-    resultado = {}
-    for chave in chaves:
-        valores = [d[chave] for d in dados_apis if d and d.get(chave)]
-        if valores:
-            resultado[chave] = max(set(valores), key=valores.count)
-        else:
-            resultado[chave] = None
-    return resultado
+def url_mapa_estatico_osm(lat, lon, zoom=18, largura=600, altura=400):
+    return f'https://staticmap.openstreetmap.de/staticmap.php?center={lat},{lon}&zoom={zoom}&size={largura}x{altura}&markers={lat},{lon},red'
