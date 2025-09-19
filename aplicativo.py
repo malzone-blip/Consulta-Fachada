@@ -34,10 +34,11 @@ def buscar_foto_mapillary(token, lat, lon):
             return data['data'][0]['thumb_2048_url']
     return None
 
+def get_osm_static_url(lat, lon, zoom=17, w=600, h=400):
+    return f"https://staticmap.openstreetmap.de/staticmap.php?center={lat},{lon}&zoom={zoom}&size={w}x{h}&markers={lat},{lon},red-pushpin"
+
 def montar_dados_pesquisa(campos):
     return {k: v for k, v in campos.items() if v.strip() != ''}
-
-pdf_bytes = None
 
 if st.button('Consultar'):
     campos_separados = {
@@ -82,6 +83,16 @@ if st.button('Consultar'):
                 """
             st.markdown(mapa_iframe, unsafe_allow_html=True)
 
+            url_mapa = get_osm_static_url(resultado['lat'], resultado['lon'])
+            imagem_mapa = None
+            try:
+                resp_map = requests.get(url_mapa, timeout=8)
+                resp_map.raise_for_status()
+                imagem_mapa = resp_map.content
+                st.image(imagem_mapa, caption='Mapa estático do local (OpenStreetMap)', use_column_width=True)
+            except Exception:
+                st.warning('Não foi possível baixar a imagem do mapa.')
+
             url_foto = buscar_foto_mapillary(MAPILLARY_TOKEN, float(resultado['lat']), float(resultado['lon']))
             imagem_foto = None
             if url_foto:
@@ -95,13 +106,11 @@ if st.button('Consultar'):
             else:
                 st.warning('Nenhuma foto real próxima disponível no Mapillary para este endereço.')
 
-            link_mapa = f"https://www.openstreetmap.org/?mlat={resultado['lat']}&mlon={resultado['lon']}#map=18/{resultado['lat']}/{resultado['lon']}"
-            pdf_bytes = gerar_pdf(resultado, imagem_foto, link_mapa)
+            pdf_bytes = gerar_pdf(resultado, imagem_foto, imagem_mapa)
 
-            # Botão de download aparece logo após gerar o PDF
             if pdf_bytes:
                 st.download_button(
-                    label='Download do PDF com informações e foto da rua',
+                    label='Download do PDF com mapa e foto da rua',
                     data=pdf_bytes,
                     file_name='endereco_consulta.pdf',
                     mime='application/pdf'
