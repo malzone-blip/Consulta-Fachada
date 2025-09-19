@@ -29,26 +29,25 @@ if st.button('Consultar'):
             **Longitude:** {resultado['lon']}  
             """)
 
-            # Gera URL do mapa estático OpenStreetMap usando lat/lon
             url_mapa = url_mapa_estatico_osm(resultado['lat'], resultado['lon'])
-            resposta_mapa = requests.get(url_mapa)
-            if resposta_mapa.status_code == 200:
-                # Exibe o mapa na tela
+            try:
+                resposta_mapa = requests.get(url_mapa, timeout=5)
+                resposta_mapa.raise_for_status()
                 st.image(resposta_mapa.content, caption='Mapa estático do local', use_column_width=True)
+            except Exception:
+                st.error('Não foi possível carregar a imagem do mapa devido a restrições de rede.')
 
-                if st.button('Gerar PDF com informações e mapa'):
-                    pdf_bytes = gerar_pdf(resultado, resposta_mapa.content)
-                    st.download_button(
-                        label='Download do PDF',
-                        data=pdf_bytes,
-                        file_name='endereco_consulta.pdf',
-                        mime='application/pdf'
-                    )
-            else:
-                st.error('Não foi possível carregar a imagem do mapa.')
+            if st.button('Gerar PDF com informações e mapa'):
+                # Se a imagem foi carregada com sucesso, usar no PDF, senão só os dados
+                imagem_bytes = resposta_mapa.content if 'resposta_mapa' in locals() and resposta_mapa.status_code == 200 else None
+                pdf_bytes = gerar_pdf(resultado, imagem_bytes)
+                st.download_button(
+                    label='Download do PDF',
+                    data=pdf_bytes,
+                    file_name='endereco_consulta.pdf',
+                    mime='application/pdf'
+                )
         else:
             st.error('Não foi possível localizar o endereço na API OpenStreetMap.')
     else:
         st.error('Por favor, preencha todas as informações no campo de endereço.')
-
-
