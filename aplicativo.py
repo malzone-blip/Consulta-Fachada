@@ -16,7 +16,7 @@ endereco_completo = st.text_area(
 
 # Campos separados para consulta
 st.markdown('---')
-st.write('Ou preencha os campos abaixo separadamente:')
+st.write('Ou preencha os campos abaixo (preenchimento parcial permitido):')
 logradouro = st.text_input('Logradouro')
 numero = st.text_input('Número')
 bairro = st.text_input('Bairro')
@@ -38,29 +38,25 @@ def buscar_foto_mapillary(token, lat, lon):
             return data['data'][0]['thumb_2048_url']
     return None
 
-def todos_campos_preenchidos(campos):
-    return all(campos.values())
+def montar_dados_pesquisa(campos):
+    # Remove os campos vazios
+    return {k: v for k, v in campos.items() if v.strip() != ''}
 
 if st.button('Consultar'):
-    # Se preencher campos separados, usar eles, senão extrair do texto único
-    if todos_campos_preenchidos({
+    campos_separados = {
         'logradouro': logradouro,
         'numero': numero,
         'bairro': bairro,
         'cidade': cidade,
         'estado': estado
-    }):
-        dados_extratos = {
-            'logradouro': logradouro,
-            'numero': numero,
-            'bairro': bairro,
-            'cidade': cidade,
-            'estado': estado
-        }
+    }
+
+    if any(v.strip() != '' for v in campos_separados.values()):
+        dados_extratos = montar_dados_pesquisa(campos_separados)
     else:
         dados_extratos = extrair_detalhes_endereco(endereco_completo)
 
-    if todos_campos_preenchidos(dados_extratos):
+    if dados_extratos:
         resultado = consulta_openstreetmap(**dados_extratos)
 
         if resultado and resultado['lat'] and resultado['lon']:
@@ -76,7 +72,6 @@ if st.button('Consultar'):
             **Longitude:** {resultado['lon']}  
             """)
 
-            # Exibe mapa via iframe
             bbox_padding = 0.001
             left = float(resultado['lon']) - bbox_padding
             right = float(resultado['lon']) + bbox_padding
@@ -90,7 +85,6 @@ if st.button('Consultar'):
                 """
             st.markdown(mapa_iframe, unsafe_allow_html=True)
 
-            # Buscar foto via Mapillary
             url_foto = buscar_foto_mapillary(MAPILLARY_TOKEN, float(resultado['lat']), float(resultado['lon']))
             imagem_foto = None
             if url_foto:
@@ -104,7 +98,6 @@ if st.button('Consultar'):
             else:
                 st.warning('Nenhuma foto real próxima disponível no Mapillary para este endereço.')
 
-            # Gerar PDF incluindo dados e foto
             if st.button('Gerar PDF com informações e foto da rua'):
                 link_mapa = f"https://www.openstreetmap.org/?mlat={resultado['lat']}&mlon={resultado['lon']}#map=18/{resultado['lat']}/{resultado['lon']}"
                 pdf_bytes = gerar_pdf(resultado, imagem_foto, link_mapa)
@@ -117,4 +110,4 @@ if st.button('Consultar'):
         else:
             st.error('Não foi possível localizar o endereço na API OpenStreetMap.')
     else:
-        st.error('Por favor, preencha todas as informações do endereço.')
+        st.error('Não foi possível extrair dados válidos para consulta.')
