@@ -1,12 +1,11 @@
 import streamlit as st
 from api_clients import consulta_openstreetmap
-from utils import extrair_detalhes_endereco
+from utils import extrair_detalhes_endereco, url_mapa_estatico_osm
 from pdf_generator import gerar_pdf
 import requests
 
-st.title('Consulta de Endereço com Mapa Interativo + Fotos Reais')
+st.title('Consulta de Endereço com OpenStreetMap + Fotos Reais via Mapillary')
 
-# Seu token Mapillary
 MAPILLARY_TOKEN = "MLY|24620608904235815|e6efa808100caa5ce0ed4751268cf95e"
 
 endereco_texto = st.text_area(
@@ -47,15 +46,31 @@ if st.button('Consultar'):
             **Longitude:** {resultado['lon']}  
             """)
 
+            # Baixar e mostrar mapa estático
+            url_mapa = url_mapa_estatico_osm(resultado['lat'], resultado['lon'])
+            imagem_mapa = None
+            try:
+                resposta_mapa = requests.get(url_mapa, timeout=5)
+                resposta_mapa.raise_for_status()
+                imagem_mapa = resposta_mapa.content
+                st.image(imagem_mapa, caption='Mapa estático do local (OpenStreetMap)', use_column_width=True)
+            except Exception:
+                st.error('Não foi possível carregar a imagem do mapa devido a restrições de rede.')
+
+            # Buscar e mostrar foto real no Mapillary
             url_foto = buscar_foto_mapillary(MAPILLARY_TOKEN, float(resultado['lat']), float(resultado['lon']))
-
+            imagem_foto = None
             if url_foto:
-                st.image(url_foto, caption='Foto real da rua via Mapillary', use_column_width=True)
-            else:
-                st.warning('Nenhuma foto real próxima disponível no Mapillary para este endereço.')
+                try:
+                    resposta_foto = requests.get(url_foto)
+                    resposta_foto.raise_for_status()
+                    imagem_foto = resposta_foto.content
+                    st.image(imagem_foto, caption='Foto real da rua via Mapillary', use_column_width=True)
+                except Exception:
+                    st.warning('Não foi possível carregar a foto real da rua.')
 
-            if st.button('Gerar PDF com informações'):
-                pdf_bytes = gerar_pdf(resultado, None)
+            if st.button('Gerar PDF com informações e imagens'):
+                pdf_bytes = gerar_pdf(resultado, imagem_mapa, imagem_foto)
                 st.download_button(
                     label='Download do PDF',
                     data=pdf_bytes,
