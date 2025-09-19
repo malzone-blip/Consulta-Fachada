@@ -4,7 +4,7 @@ from utils import extrair_detalhes_endereco, url_mapa_estatico_osm
 from pdf_generator import gerar_pdf
 import requests
 
-st.title('Consulta de Endereço com OpenStreetMap')
+st.title('Consulta de Endereço com OpenStreetMap - Mapa Automático')
 
 endereco_texto = st.text_area(
     'Cole o endereço completo aqui (ex: Endereço: Rua X Número: 123 Bairro: Y Cidade: Z Estado: XX)',
@@ -29,10 +29,12 @@ if st.button('Consultar'):
             **Longitude:** {resultado['lon']}  
             """)
 
+            # Gera URL do mapa estático OpenStreetMap usando lat/lon
             url_mapa = url_mapa_estatico_osm(resultado['lat'], resultado['lon'])
             resposta_mapa = requests.get(url_mapa)
             if resposta_mapa.status_code == 200:
-                st.image(resposta_mapa.content, caption='Mapa do local', use_column_width=True)
+                # Exibe o mapa na tela
+                st.image(resposta_mapa.content, caption='Mapa estático do local', use_column_width=True)
 
                 if st.button('Gerar PDF com informações e mapa'):
                     pdf_bytes = gerar_pdf(resultado, resposta_mapa.content)
@@ -48,3 +50,5 @@ if st.button('Consultar'):
             st.error('Não foi possível localizar o endereço na API OpenStreetMap.')
     else:
         st.error('Por favor, preencha todas as informações no campo de endereço.')
+
+
