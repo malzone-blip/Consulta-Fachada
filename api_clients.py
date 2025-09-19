@@ -22,7 +22,6 @@ def consulta_openstreetmap(logradouro=None, numero=None, bairro=None, cidade=Non
         address_parts.append(estado)
 
     if not address_parts:
-        # Sem dados para consulta
         return None
 
     params['q'] = ', '.join(address_parts)
