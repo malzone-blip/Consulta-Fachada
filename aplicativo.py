@@ -1,6 +1,6 @@
 import streamlit as st
 from api_clients import consulta_openstreetmap
-from utils import extrair_detalhes_endereco, url_mapa_estatico_osm
+from utils import extrair_detalhes_endereco
 from pdf_generator import gerar_pdf
 import requests
 
@@ -12,6 +12,20 @@ endereco_texto = st.text_area(
     'Cole o endereço completo aqui (ex: Endereço: Rua X Número: 123 Bairro: Y Cidade: Z Estado: XX)',
     height=120
 )
+
+def gerar_iframe_osm(lat, lon, zoom=18, largura='100%', altura=400):
+    bbox_padding = 0.001
+    left = float(lon) - bbox_padding
+    right = float(lon) + bbox_padding
+    top = float(lat) + bbox_padding
+    bottom = float(lat) - bbox_padding
+
+    iframe_html = f"""
+    <iframe width="{largura}" height="{altura}" frameborder="0" scrolling="no"
+    src="https://www.openstreetmap.org/export/embed.html?bbox={left},{bottom},{right},{top}&layer=mapnik&marker={lat},{lon}" 
+    style="border:1px solid black"></iframe>
+    """
+    return iframe_html
 
 def buscar_foto_mapillary(token, lat, lon):
     url = "https://graph.mapillary.com/images"
@@ -46,18 +60,11 @@ if st.button('Consultar'):
             **Longitude:** {resultado['lon']}  
             """)
 
-            # Baixar e mostrar mapa estático
-            url_mapa = url_mapa_estatico_osm(resultado['lat'], resultado['lon'])
-            imagem_mapa = None
-            try:
-                resposta_mapa = requests.get(url_mapa, timeout=5)
-                resposta_mapa.raise_for_status()
-                imagem_mapa = resposta_mapa.content
-                st.image(imagem_mapa, caption='Mapa estático do local (OpenStreetMap)', use_column_width=True)
-            except Exception:
-                st.error('Não foi possível carregar a imagem do mapa devido a restrições de rede.')
+            # Exibe o mapa OSM via iframe
+            mapa_iframe = gerar_iframe_osm(float(resultado['lat']), float(resultado['lon']))
+            st.markdown(mapa_iframe, unsafe_allow_html=True)
 
-            # Buscar e mostrar foto real no Mapillary
+            # Busca e exibe foto da rua via Mapillary
             url_foto = buscar_foto_mapillary(MAPILLARY_TOKEN, float(resultado['lat']), float(resultado['lon']))
             imagem_foto = None
             if url_foto:
@@ -68,9 +75,13 @@ if st.button('Consultar'):
                     st.image(imagem_foto, caption='Foto real da rua via Mapillary', use_column_width=True)
                 except Exception:
                     st.warning('Não foi possível carregar a foto real da rua.')
+            else:
+                st.warning('Nenhuma foto real próxima disponível no Mapillary para este endereço.')
 
-            if st.button('Gerar PDF com informações e imagens'):
-                pdf_bytes = gerar_pdf(resultado, imagem_mapa, imagem_foto)
+            # Geração do PDF: inclui dados + imagem da foto da rua (se disponível) + link do mapa OSM
+            if st.button('Gerar PDF com informações e foto da rua'):
+                link_mapa = f"https://www.openstreetmap.org/?mlat={resultado['lat']}&mlon={resultado['lon']}#map=18/{resultado['lat']}/{resultado['lon']}"
+                pdf_bytes = gerar_pdf(resultado, imagem_foto, link_mapa)
                 st.download_button(
                     label='Download do PDF',
                     data=pdf_bytes,
