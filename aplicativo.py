@@ -37,7 +37,6 @@ def buscar_foto_mapillary(token, lat, lon):
 def montar_dados_pesquisa(campos):
     return {k: v for k, v in campos.items() if v.strip() != ''}
 
-pdf_gerado = False
 pdf_bytes = None
 
 if st.button('Consultar'):
@@ -96,14 +95,13 @@ if st.button('Consultar'):
             else:
                 st.warning('Nenhuma foto real próxima disponível no Mapillary para este endereço.')
 
-            if st.button('Gerar PDF com informações e foto da rua'):
-                link_mapa = f"https://www.openstreetmap.org/?mlat={resultado['lat']}&mlon={resultado['lon']}#map=18/{resultado['lat']}/{resultado['lon']}"
-                pdf_bytes = gerar_pdf(resultado, imagem_foto, link_mapa)
-                pdf_gerado = True
+            link_mapa = f"https://www.openstreetmap.org/?mlat={resultado['lat']}&mlon={resultado['lon']}#map=18/{resultado['lat']}/{resultado['lon']}"
+            pdf_bytes = gerar_pdf(resultado, imagem_foto, link_mapa)
 
-            if pdf_gerado and pdf_bytes:
+            # Botão de download aparece logo após gerar o PDF
+            if pdf_bytes:
                 st.download_button(
-                    label='Download do PDF',
+                    label='Download do PDF com informações e foto da rua',
                     data=pdf_bytes,
                     file_name='endereco_consulta.pdf',
                     mime='application/pdf'
