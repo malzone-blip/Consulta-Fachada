@@ -50,7 +50,5 @@ def gerar_pdf(dados, imagem_foto_bytes=None, link_mapa=None):
         pdf.chapter_title('Mapa Estático (OpenStreetMap)')
         pdf.add_link_text('Clique aqui para visualizar o mapa', link_mapa)
 
-    pdf_output = BytesIO()
-    pdf.output(pdf_output)
-    pdf_output.seek(0)
-    return pdf_output
+    pdf_bytes = pdf.output(dest='S').encode('latin1')
+    return pdf_bytes
