@@ -2,27 +2,32 @@ import streamlit as st
 from api_clients import consulta_openstreetmap
 from utils import extrair_detalhes_endereco
 from pdf_generator import gerar_pdf
+import requests
 
-st.title('Consulta de Endereço com OpenStreetMap - Mapa Interativo')
+st.title('Consulta de Endereço com Mapa Interativo + Fotos Reais')
+
+# Seu token Mapillary
+MAPILLARY_TOKEN = "MLY|24620608904235815|e6efa808100caa5ce0ed4751268cf95e"
 
 endereco_texto = st.text_area(
     'Cole o endereço completo aqui (ex: Endereço: Rua X Número: 123 Bairro: Y Cidade: Z Estado: XX)',
     height=120
 )
 
-def gerar_iframe_osm(lat, lon, zoom=18, largura='100%', altura=400):
-    bbox_padding = 0.001  # pequeno recuo para bbox
-    left = float(lon) - bbox_padding
-    right = float(lon) + bbox_padding
-    top = float(lat) + bbox_padding
-    bottom = float(lat) - bbox_padding
-
-    iframe_html = f"""
-    <iframe width="{largura}" height="{altura}" frameborder="0" scrolling="no"
-    src="https://www.openstreetmap.org/export/embed.html?bbox={left},{bottom},{right},{top}&layer=mapnik&marker={lat},{lon}" 
-    style="border:1px solid black"></iframe>
-    """
-    return iframe_html
+def buscar_foto_mapillary(token, lat, lon):
+    url = "https://graph.mapillary.com/images"
+    params = {
+        "access_token": token,
+        "fields": "id,captured_at,thumb_2048_url",
+        "closeto": f"{lon},{lat}",
+        "limit": 1
+    }
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        if 'data' in data and data['data']:
+            return data['data'][0]['thumb_2048_url']
+    return None
 
 if st.button('Consultar'):
     dados_extratos = extrair_detalhes_endereco(endereco_texto)
@@ -42,8 +47,12 @@ if st.button('Consultar'):
             **Longitude:** {resultado['lon']}  
             """)
 
-            mapa_iframe = gerar_iframe_osm(resultado['lat'], resultado['lon'])
-            st.markdown(mapa_iframe, unsafe_allow_html=True)
+            url_foto = buscar_foto_mapillary(MAPILLARY_TOKEN, float(resultado['lat']), float(resultado['lon']))
+
+            if url_foto:
+                st.image(url_foto, caption='Foto real da rua via Mapillary', use_column_width=True)
+            else:
+                st.warning('Nenhuma foto real próxima disponível no Mapillary para este endereço.')
 
             if st.button('Gerar PDF com informações'):
                 pdf_bytes = gerar_pdf(resultado, None)
