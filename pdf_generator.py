@@ -16,14 +16,13 @@ class PDF(FPDF):
         self.multi_cell(0, 10, body)
         self.ln()
 
-    def add_image(self, image_data):
-        # Adiciona imagem se image_data não for None
+    def add_image(self, image_data, y_position=40):
         if image_data:
             self.add_page()
-            # image_data deve ser um BytesIO ou caminho para arquivo
-            self.image(image_data, x=10, y=60, w=190)
+            imagem_stream = BytesIO(image_data)
+            self.image(imagem_stream, x=10, y=y_position, w=190)
 
-def gerar_pdf(dados, imagem_bytes=None):
+def gerar_pdf(dados, imagem_mapa_bytes=None, imagem_foto_bytes=None):
     pdf = PDF()
     pdf.add_page()
     texto = (f"Logradouro: {dados['logradouro']}\n"
@@ -32,14 +31,17 @@ def gerar_pdf(dados, imagem_bytes=None):
              f"Cidade: {dados['cidade']}\n"
              f"Estado: {dados['estado']}\n"
              f"CEP: {dados['cep'] if dados['cep'] else 'Não disponível'}")
-    
+
     pdf.chapter_title('Informações do Endereço')
     pdf.chapter_body(texto)
 
-    if imagem_bytes:
-        from io import BytesIO
-        imagem_stream = BytesIO(imagem_bytes)
-        pdf.add_image(imagem_stream)
+    if imagem_mapa_bytes:
+        pdf.chapter_title('Mapa Estático (OpenStreetMap)')
+        pdf.add_image(imagem_mapa_bytes, y_position=50)
+
+    if imagem_foto_bytes:
+        pdf.chapter_title('Foto Real da Rua (Mapillary)')
+        pdf.add_image(imagem_foto_bytes, y_position=50)
 
     pdf_output = BytesIO()
     pdf.output(pdf_output)
