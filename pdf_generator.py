@@ -22,12 +22,6 @@ class PDF(FPDF):
             imagem_stream = BytesIO(image_data)
             self.image(imagem_stream, x=10, y=y_position, w=190)
 
-    def add_link_text(self, text, url):
-        self.set_text_color(0, 0, 255)
-        self.set_font('', 'U')
-        self.cell(0, 10, text, 0, 1, '', False, url)
-        self.set_text_color(0, 0, 0)
-
 def gerar_pdf(dados, imagem_foto_bytes=None, link_mapa=None):
     pdf = PDF()
     pdf.add_page()
@@ -47,8 +41,12 @@ def gerar_pdf(dados, imagem_foto_bytes=None, link_mapa=None):
         pdf.add_image(imagem_foto_bytes, y_position=50)
 
     if link_mapa:
+        pdf.add_page()
         pdf.chapter_title('Mapa Estático (OpenStreetMap)')
-        pdf.add_link_text('Clique aqui para visualizar o mapa', link_mapa)
+        pdf.set_text_color(0, 0, 255)
+        pdf.set_font('Arial', 'U', 12)
+        pdf.cell(0, 10, 'Clique aqui para visualizar o mapa', 0, 1, '', False, link_mapa)
+        pdf.set_text_color(0, 0, 0)
 
     pdf_bytes = pdf.output(dest='S').encode('latin1')
     return pdf_bytes
