@@ -8,15 +8,11 @@ st.title('Consulta de Endereço com OpenStreetMap + Fotos Reais via Mapillary')
 
 MAPILLARY_TOKEN = "MLY|24620608904235815|e6efa808100caa5ce0ed4751268cf95e"
 
-# Campo para endereço completo (texto livre)
 endereco_completo = st.text_area(
     'Cole o endereço completo aqui (ex: Endereço: Rua X Número: 123 Bairro: Y Cidade: Z Estado: XX)',
     height=120
 )
 
-# Campos separados para consulta
-st.markdown('---')
-st.write('Ou preencha os campos abaixo (preenchimento parcial permitido):')
 logradouro = st.text_input('Logradouro')
 numero = st.text_input('Número')
 bairro = st.text_input('Bairro')
@@ -39,8 +35,10 @@ def buscar_foto_mapillary(token, lat, lon):
     return None
 
 def montar_dados_pesquisa(campos):
-    # Remove os campos vazios
     return {k: v for k, v in campos.items() if v.strip() != ''}
+
+pdf_gerado = False
+pdf_bytes = None
 
 if st.button('Consultar'):
     campos_separados = {
@@ -101,6 +99,9 @@ if st.button('Consultar'):
             if st.button('Gerar PDF com informações e foto da rua'):
                 link_mapa = f"https://www.openstreetmap.org/?mlat={resultado['lat']}&mlon={resultado['lon']}#map=18/{resultado['lat']}/{resultado['lon']}"
                 pdf_bytes = gerar_pdf(resultado, imagem_foto, link_mapa)
+                pdf_gerado = True
+
+            if pdf_gerado and pdf_bytes:
                 st.download_button(
                     label='Download do PDF',
                     data=pdf_bytes,
