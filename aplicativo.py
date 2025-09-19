@@ -1,15 +1,28 @@
 import streamlit as st
 from api_clients import consulta_openstreetmap
-from utils import extrair_detalhes_endereco, url_mapa_estatico_osm
+from utils import extrair_detalhes_endereco
 from pdf_generator import gerar_pdf
-import requests
 
-st.title('Consulta de Endereço com OpenStreetMap - Mapa Automático')
+st.title('Consulta de Endereço com OpenStreetMap - Mapa Interativo')
 
 endereco_texto = st.text_area(
     'Cole o endereço completo aqui (ex: Endereço: Rua X Número: 123 Bairro: Y Cidade: Z Estado: XX)',
     height=120
 )
+
+def gerar_iframe_osm(lat, lon, zoom=18, largura='100%', altura=400):
+    bbox_padding = 0.001  # pequeno recuo para bbox
+    left = float(lon) - bbox_padding
+    right = float(lon) + bbox_padding
+    top = float(lat) + bbox_padding
+    bottom = float(lat) - bbox_padding
+
+    iframe_html = f"""
+    <iframe width="{largura}" height="{altura}" frameborder="0" scrolling="no"
+    src="https://www.openstreetmap.org/export/embed.html?bbox={left},{bottom},{right},{top}&layer=mapnik&marker={lat},{lon}" 
+    style="border:1px solid black"></iframe>
+    """
+    return iframe_html
 
 if st.button('Consultar'):
     dados_extratos = extrair_detalhes_endereco(endereco_texto)
@@ -29,18 +42,11 @@ if st.button('Consultar'):
             **Longitude:** {resultado['lon']}  
             """)
 
-            url_mapa = url_mapa_estatico_osm(resultado['lat'], resultado['lon'])
-            try:
-                resposta_mapa = requests.get(url_mapa, timeout=5)
-                resposta_mapa.raise_for_status()
-                st.image(resposta_mapa.content, caption='Mapa estático do local', use_column_width=True)
-            except Exception:
-                st.error('Não foi possível carregar a imagem do mapa devido a restrições de rede.')
+            mapa_iframe = gerar_iframe_osm(resultado['lat'], resultado['lon'])
+            st.markdown(mapa_iframe, unsafe_allow_html=True)
 
-            if st.button('Gerar PDF com informações e mapa'):
-                # Se a imagem foi carregada com sucesso, usar no PDF, senão só os dados
-                imagem_bytes = resposta_mapa.content if 'resposta_mapa' in locals() and resposta_mapa.status_code == 200 else None
-                pdf_bytes = gerar_pdf(resultado, imagem_bytes)
+            if st.button('Gerar PDF com informações'):
+                pdf_bytes = gerar_pdf(resultado, None)
                 st.download_button(
                     label='Download do PDF',
                     data=pdf_bytes,
