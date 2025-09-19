@@ -1,6 +1,5 @@
 from fpdf import FPDF
 from io import BytesIO
-from PIL import Image
 
 class PDF(FPDF):
     def header(self):
@@ -18,34 +17,31 @@ class PDF(FPDF):
         self.ln()
 
     def add_image(self, image_data):
-        self.image(image_data, x=10, y=60, w=190)
+        # Adiciona imagem se image_data não for None
+        if image_data:
+            self.add_page()
+            # image_data deve ser um BytesIO ou caminho para arquivo
+            self.image(image_data, x=10, y=60, w=190)
 
-def gerar_pdf(dados, imagem_bytes):
+def gerar_pdf(dados, imagem_bytes=None):
     pdf = PDF()
     pdf.add_page()
-    texto = f"Logradouro: {dados['logradouro']}\nNumero: {dados['numero']}\nBairro: {dados['bairro']}\nCidade: {dados['cidade']}\nEstado: {dados['estado']}\nCEP: {dados['cep']}"
+    texto = (f"Logradouro: {dados['logradouro']}\n"
+             f"Número: {dados['numero']}\n"
+             f"Bairro: {dados['bairro']}\n"
+             f"Cidade: {dados['cidade']}\n"
+             f"Estado: {dados['estado']}\n"
+             f"CEP: {dados['cep'] if dados['cep'] else 'Não disponível'}")
+    
     pdf.chapter_title('Informações do Endereço')
     pdf.chapter_body(texto)
 
-    temp_img = BytesIO(imagem_bytes)
-    img = Image.open(temp_img)
-    temp_img.seek(0)
-    pdf.add_page()
-    pdf.add_image(temp_img)
+    if imagem_bytes:
+        from io import BytesIO
+        imagem_stream = BytesIO(imagem_bytes)
+        pdf.add_image(imagem_stream)
 
     pdf_output = BytesIO()
     pdf.output(pdf_output)
     pdf_output.seek(0)
     return pdf_output
-
-def gerar_mapa_statico(lat, lon):
-    GOOGLE_STATIC_MAPS_API_KEY = 'sua_chave_google_maps'
-    url = f'https://maps.googleapis.com/maps/api/staticmap?center={lat},{lon}&zoom=18&size=600x400&markers=color:red%7C{lat},{lon}&key={GOOGLE_STATIC_MAPS_API_KEY}'
-    try:
-        resposta = requests.get(url)
-        if resposta.status_code == 200:
-            return resposta.content
-        else:
-            return None
-    except:
-        return None
